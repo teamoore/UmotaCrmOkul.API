@@ -30,5 +30,6 @@ namespace UmotaCrmOkul.API.ModelDto
         public DateTime? Tarih8 { get; set; }
         public DateTime? Tarih9 { get; set; }
         public DateTime? Tarih10 { get; set; }
-    }
+        public List<OdemePlaniDto> OdemePlani { get; set; }
+}
 }

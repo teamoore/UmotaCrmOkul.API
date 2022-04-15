@@ -9,6 +9,7 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
 {
     public interface IFiyatService
     {
-        public Task<IEnumerable<FiyatDto>> GetFiyatByDonem(FiyatRequestDto request);
+        public Task<FiyatDto> GetFiyatByDonem(FiyatRequestDto request);
+        public Task<FiyatDto> OdemePlaniOlustur(FiyatRequestDto request);
     }
 }

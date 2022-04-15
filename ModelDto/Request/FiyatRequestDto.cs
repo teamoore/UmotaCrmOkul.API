@@ -13,5 +13,6 @@ namespace UmotaCrmOkul.API.ModelDto.Request
         public int Yatili { get; set; }  // Sayısal olarak gönderilecektir. 10 (Yatılı Değil), 20 (5 Gün Yatılı), 30 (Yedi Gün Yatılı)
         public int BursOrani { get; set; } // Tam sayı şeklinde gönderilecektir
         public int OdemeSekli { get; set; } // Tam sayı şeklinde gönderilecektir. Gönderilen tam sayı değeri taksit sayısını ifade etmektedir. Eğer 0 (sıfır) değeri gönderilirse peşin ödeme olarak yorumlanacaktır
+        public string KullaniciKodu { get; set; }
     }
 }

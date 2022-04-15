@@ -25,12 +25,12 @@ namespace UmotaCrmOkul.API.Controllers
             this.fiyatService = fiyatService;
         }
 
-        [HttpPost("FiyatlarGetir")]
-        public async Task<ServiceResponse<IEnumerable<FiyatDto>>> GetFiyatlar(FiyatRequestDto request)
+        [HttpPost("OdemePlaniGetir")]
+        public async Task<ServiceResponse<FiyatDto>> GetFiyatlar(FiyatRequestDto request)
         {
             try
             {
-                return new ServiceResponse<IEnumerable<FiyatDto>>()
+                return new ServiceResponse<FiyatDto>()
                 {
                     Value = await fiyatService.GetFiyatByDonem(request)
                 };
@@ -39,7 +39,27 @@ namespace UmotaCrmOkul.API.Controllers
             {
                 _logger.Log(LogLevel.Error, ex.Message);
 
-                var e = new ServiceResponse<IEnumerable<FiyatDto>>();
+                var e = new ServiceResponse<FiyatDto>();
+                e.SetException(ex);
+                return e;
+            }
+        }
+
+        [HttpPost("OdemePlaniOlustur")]
+        public async Task<ServiceResponse<FiyatDto>> OdemePlaniOlusturr(FiyatRequestDto request)
+        {
+            try
+            {
+                return new ServiceResponse<FiyatDto>()
+                {
+                    Value = await fiyatService.OdemePlaniOlustur(request)
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message);
+
+                var e = new ServiceResponse<FiyatDto>();
                 e.SetException(ex);
                 return e;
             }
