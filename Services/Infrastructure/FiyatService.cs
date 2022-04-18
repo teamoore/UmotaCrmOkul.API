@@ -305,6 +305,8 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
             if (ogrencidonemref != 0)
                 throw new Exception("Öğrenci dönem kaydı mevcut, yeni kayıt yapılamaz");
 
+            await KullaniciControl(request.KullaniciKodu);
+
             var ogrencidonem = await OgrenciDonemOlustur(ogrenciref,request);
             var ogrencidonemodeme = await OgrenciDonemOdemeOlustur(ogrencidonem, fiyat, request);
             await SaveDb(ogrencidonem, ogrencidonemodeme);
@@ -721,9 +723,31 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
             if (ogrencidonemref == 0)
                 throw new Exception("Öğrenci dönem kaydı bulunamadı");
 
+            await KullaniciControl(request.KullaniciKodu);
+            await DeleteControls(ogrencidonemref, request.KullaniciKodu);
             await DeleteDb(ogrencidonemref, request.KullaniciKodu);
 
             return request;
+        }
+        public async Task DeleteControls(int ogrencidonemref, string kullanicikodu)
+        {
+            using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.CompanyConnectionString)))
+            {
+                var sqlstring = "Select logref, insuser, insdate, upduser, upddate from [dbo].[ogrenci_donem] with(nolock) where logref = " + ogrencidonemref;
+
+                var ogrencidonem = await db.QuerySingleOrDefaultAsync<OgrenciDonem>(sqlstring, commandType: System.Data.CommandType.Text);
+                if (ogrencidonem == null)
+                    throw new Exception("Öğrenci dönem kaydı bulunamadı");
+
+                if (!ogrencidonem.insuser.Equals(kullanicikodu))
+                    throw new Exception("Öğrenci dönem kaydını siz oluşturmadınız, bu kaydı geri alamazsınız");
+
+                if (!string.IsNullOrWhiteSpace(ogrencidonem.upduser))
+                    throw new Exception("Öğrenci dönem kaydı değiştirilmiş, bu kaydı geri alamazsınız");
+
+                if (ogrencidonem.insdate.Value.AddDays(3) < DateTime.Now)
+                    throw new Exception("Öğrenci dönem kaydı üzerinden 3 gün geçmiş, bu kaydı geri alamazsınız");
+            }
         }
         public async Task DeleteDb(int ogrencidonemref, string kullanicikodu)
         {
@@ -753,6 +777,17 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                     await transaction.RollbackAsync();
                     throw new Exception($"Error encountered whilst executing  SQL: {sqlstring}, Message: {exception.Message}");
                 }
+            }
+        }
+        public async Task KullaniciControl(string kullanicikodu)
+        {
+            using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.MasterConnectionString)))
+            {
+                var sqlstring = "Select count(*) from [dbo].[sis_kullanici] with(nolock) where kullanici_kodu like '" + kullanicikodu + "' and isnull(kullanici_iptal,0) = 0";
+
+                var say = await db.QuerySingleOrDefaultAsync<int>(sqlstring);
+                if (say == 0)
+                    throw new Exception("Kullanıcı kodu bulunamadı");
             }
         }
     }

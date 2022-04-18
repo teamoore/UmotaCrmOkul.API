@@ -19,7 +19,10 @@ namespace UmotaCrmOkul.API.ModelDto
         public string bankahesapno   { get; set; }
         public string bankahesapadi   { get; set; }
         public bool kdvsiz { get; set; }
-        public string insuser   { get; set; }
         public int gunduzluref { get; set; }
+        public string insuser { get; set; }
+        public DateTime? insdate { get; set; }
+        public string upduser { get; set; }
+        public DateTime? upddate { get; set; }
     }
 }
