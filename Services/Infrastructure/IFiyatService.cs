@@ -11,5 +11,6 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
     {
         public Task<FiyatDto> GetFiyatByDonem(FiyatRequestDto request);
         public Task<FiyatDto> OdemePlaniOlustur(FiyatRequestDto request);
+        public Task<FiyatRequestDto> OdemePlaniGeriAl(FiyatRequestDto request);
     }
 }

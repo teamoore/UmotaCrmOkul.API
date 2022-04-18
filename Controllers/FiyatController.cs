@@ -64,5 +64,25 @@ namespace UmotaCrmOkul.API.Controllers
                 return e;
             }
         }
+
+        [HttpPost("OdemePlaniGeriAl")]
+        public async Task<ServiceResponse<FiyatRequestDto>> OdemePlaniGeriAll(FiyatRequestDto request)
+        {
+            try
+            {
+                return new ServiceResponse<FiyatRequestDto>()
+                {
+                    Value = await fiyatService.OdemePlaniGeriAl(request)
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message);
+
+                var e = new ServiceResponse<FiyatRequestDto>();
+                e.SetException(ex);
+                return e;
+            }
+        }
     }
 }

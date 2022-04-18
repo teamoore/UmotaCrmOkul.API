@@ -68,11 +68,12 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                     " and e.kodu like '" + request.OdemeSekli + "'" +
                     " and a.bursyuz = " + request.BursOrani;
 
-                //throw new Exception("Teklif bulunamadı");
 
                 fiyat = await db.QuerySingleOrDefaultAsync<FiyatDto>(sql, commandType: System.Data.CommandType.Text);
-                OdemePlaniDto odeme;
+                if (fiyat == null)
+                    throw new Exception("Ödeme Planı bulunamadı");
 
+                OdemePlaniDto odeme;
                 switch (request.OdemeSekli)
                 {
                     case 0:
@@ -282,19 +283,24 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
         public async Task<FiyatDto> OdemePlaniOlustur(FiyatRequestDto request)
         {
             if (string.IsNullOrWhiteSpace(request.TcKimlik))
-                throw new Exception("Öğrenci TCK gönderilmelidir");
+                throw new Exception("Öğrenci TCKN gönderilmelidir");
 
             var fiyat = await GetFiyatByDonem(request); 
 
             if (fiyat == null)
                 throw new Exception("Ödeme Planı bulunamadı");
 
-            var ogrenciref = await OgrenciRefAl(request.TcKimlik);
+            var cardref = await CardRefAl(request.TcKimlik);
+
+            if (cardref == 0)
+                throw new Exception("Cari Kart bulunamadı");
+
+            var ogrenciref = await OgrenciRefAl(cardref);
 
             if (ogrenciref == 0)
                 throw new Exception("Öğrenci Kartı bulunamadı");
 
-            var ogrencidonemref = await OgrenciDonemKontrol(ogrenciref,request.Sezon,request.Seviye);
+            var ogrencidonemref = await OgrenciDonemRefAl(ogrenciref,request.Sezon,request.Seviye);
 
             if (ogrencidonemref != 0)
                 throw new Exception("Öğrenci dönem kaydı mevcut, yeni kayıt yapılamaz");
@@ -305,26 +311,37 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
 
             return fiyat;
         }
-
-        public async Task<int> OgrenciRefAl(string tckno)
+        public async Task<int> CardRefAl(string tckno)
         {
-            using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.CompanyConnectionString)))
+            using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.LogoConnectionString)))
             {
                 string LogoDbName = configuration["LogoDbName"];
                 string LogoFirmaNo = configuration["LogoFirmaNo"];
                 string CLCARD = LogoDbName + ".dbo.LG_" + LogoFirmaNo + "_CLCARD";
                 string CLCARDXT = LogoDbName + ".dbo.LG_XT1015_" + LogoFirmaNo;
 
-                string sqlstring = "SELECT top 1 A.logref " +
-                    "FROM ogrenci_kart A WITH(NOLOCK) " +
-                    "INNER JOIN " + CLCARDXT + " B WITH(NOLOCK) ON A.cardref = B.PARLOGREF " +
+                string sqlstring = "SELECT top 1 A.LOGICALREF " +
+                    "FROM " + CLCARD + " A WITH(NOLOCK) " +
+                    "INNER JOIN " + CLCARDXT + " B WITH(NOLOCK) ON A.LOGICALREF = B.PARLOGREF " +
                     "WHERE B.OGRENCI_TC LIKE '" + tckno + "'";
 
                 return await db.QuerySingleOrDefaultAsync<int>(sqlstring);
             }
         }
 
-        public async Task<int> OgrenciDonemKontrol(int ogrenciref, string donem, string sinif)
+        public async Task<int> OgrenciRefAl(int cardref)
+        {
+            using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.CompanyConnectionString)))
+            {
+                string sqlstring = "SELECT top 1 A.logref " +
+                    "FROM ogrenci_kart A WITH(NOLOCK) " +
+                    "WHERE A.cardref = " + cardref;
+
+                return await db.QuerySingleOrDefaultAsync<int>(sqlstring);
+            }
+        }
+
+        public async Task<int> OgrenciDonemRefAl(int ogrenciref, string donem, string sinif)
         {
             using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.CompanyConnectionString)))
             {
@@ -497,11 +514,8 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                         donemodeme.insuser = request.KullaniciKodu;
                         donemodemelist.Add(donemodeme);
                     }
-
                 }
-
             }
-
             return donemodemelist;
         }
 
@@ -510,8 +524,8 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
             using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.CompanyConnectionString)))
             {
                 string sqlstring = "";
-                //db.Open();
-                //var transaction = await db.BeginTransactionAsync();
+                db.Open();
+                var transaction = await db.BeginTransactionAsync();
                 try
                 {
 
@@ -537,7 +551,7 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                     p.Add("@insuser", donem.insuser);
                     p.Add("@kdvsiz", donem.kdvsiz);
 
-                    await db.ExecuteAsync(sqlstring, p, commandType: CommandType.Text);
+                    await db.ExecuteAsync(sqlstring, p, commandType: CommandType.Text, transaction:transaction);
 
                     sqlstring = "INSERT INTO [dbo].[ogrenci_donem_odeme] " +
                         "(logref,ogrenciref,ogrencidonemref,odemetipi,taksitno,taksittar,tutar_veli,tutar_egitim,tutar_yatili,tutar_burs " +
@@ -568,14 +582,14 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                         p.Add("@insuser", odeme.insuser);
                         p.Add("@kdvsiz", donem.kdvsiz);
 
-                        await db.ExecuteAsync(sqlstring, p, commandType: CommandType.Text);
+                        await db.ExecuteAsync(sqlstring, p, commandType: CommandType.Text, transaction: transaction);
                     }
 
-                    //await transaction.CommitAsync();
+                    await transaction.CommitAsync();
                 }
                 catch (Exception exception)
                 {
-                    //await transaction.RollbackAsync();
+                    await transaction.RollbackAsync();
                     throw new Exception($"Error encountered whilst executing  SQL: {sqlstring}, Message: {exception.Message}");
                 }
             }
@@ -640,7 +654,6 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                 return tarih;
             }
         }
-
         public async Task<int> RefNoAl(string tablename)
         {
             using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.MasterConnectionString)))
@@ -656,7 +669,6 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                 return c;
             }
         }
-        
         public async Task<int> GetSabitDetayIDByName(int tip ,string adi)
         {
             using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.MasterConnectionString)))
@@ -673,7 +685,6 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                 return c;
             }
         }
-
         public async Task<int> GetSabitDetayIDByCode(int tip, string kodu)
         {
             using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.MasterConnectionString)))
@@ -688,6 +699,60 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                 int c = p.Get<int>("@ReturnValue");
 
                 return c;
+            }
+        }
+        public async Task<FiyatRequestDto> OdemePlaniGeriAl(FiyatRequestDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.TcKimlik))
+                throw new Exception("Öğrenci TCKN gönderilmelidir");
+
+            var cardref = await CardRefAl(request.TcKimlik);
+
+            if (cardref == 0)
+                throw new Exception("Cari Kart bulunamadı");
+
+            var ogrenciref = await OgrenciRefAl(cardref);
+
+            if (ogrenciref == 0)
+                throw new Exception("Öğrenci Kartı bulunamadı");
+
+            var ogrencidonemref = await OgrenciDonemRefAl(ogrenciref, request.Sezon, request.Seviye);
+
+            if (ogrencidonemref == 0)
+                throw new Exception("Öğrenci dönem kaydı bulunamadı");
+
+            await DeleteDb(ogrencidonemref, request.KullaniciKodu);
+
+            return request;
+        }
+        public async Task DeleteDb(int ogrencidonemref, string kullanicikodu)
+        {
+            using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.CompanyConnectionString)))
+            {
+                string sqlstring = "";
+                db.Open();
+                var transaction = await db.BeginTransactionAsync();
+                try
+                {
+                    sqlstring = "Update [dbo].[ogrenci_donem] Set status = 2, upddate=GetDate(), upduser= @upduser where logref = @ogrencidonemref ";
+
+                    var p = new DynamicParameters();
+                    p.Add("@ogrencidonemref", ogrencidonemref);
+                    p.Add("@upduser", kullanicikodu);
+
+                    await db.ExecuteAsync(sqlstring, p, commandType: CommandType.Text, transaction: transaction);
+
+                    sqlstring = "Update [dbo].[ogrenci_donem_odeme] Set status = 2, upddate=GetDate(), upduser= @upduser where ogrencidonemref = @ogrencidonemref ";
+
+                    await db.ExecuteAsync(sqlstring, p, commandType: CommandType.Text, transaction: transaction);
+
+                    await transaction.CommitAsync();
+                }
+                catch (Exception exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw new Exception($"Error encountered whilst executing  SQL: {sqlstring}, Message: {exception.Message}");
+                }
             }
         }
     }
