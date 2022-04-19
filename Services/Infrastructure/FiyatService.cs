@@ -7,6 +7,7 @@ using System.Data;
 using UmotaCrmOkul.API.Consts;
 using UmotaCrmOkul.API.ModelDto;
 using UmotaCrmOkul.API.ModelDto.Request;
+using System;
 
 namespace UmotaCrmOkul.API.Services.Infrastructure
 {
