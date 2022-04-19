@@ -9,5 +9,6 @@ namespace UmotaCrmOkul.API.Consts
     {
         public const string MasterConnectionString = "crmokul";
         public const string CompanyConnectionString = "crmokul001";
+        public const string LogoConnectionString = "logo";
     }
 }
