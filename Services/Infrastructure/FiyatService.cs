@@ -524,7 +524,10 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
         {
             using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.CompanyConnectionString)))
             {
-                string sqlstring = "";
+                string sqlstring = "select top 1 hizmetref, hizmetref2, hizmetref3 from hizmet_kodlari with(nolock) where donemref = " + donem.donemref;
+
+                var hizmetkodlari = await db.QuerySingleOrDefaultAsync<HizmetKodlari>(sqlstring, commandType: System.Data.CommandType.Text);
+
                 db.Open();
                 var transaction = await db.BeginTransactionAsync();
                 try
@@ -556,11 +559,12 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
 
                     sqlstring = "INSERT INTO [dbo].[ogrenci_donem_odeme] " +
                         "(logref,ogrenciref,ogrencidonemref,odemetipi,taksitno,taksittar,tutar_veli,tutar_egitim,tutar_yatili,tutar_burs " +
-                        ",tutar_burs_egitim,tutar_burs_yatili,tutar_fatura,tutar_fatura_egitim,tutar_fatura_yatili,kdvsiz,status,insuser,insdate) " +
+                        ",tutar_burs_egitim,tutar_burs_yatili,tutar_fatura,tutar_fatura_egitim,tutar_fatura_yatili,kdvsiz,status,insuser,insdate" +
+                        ",hizmetref, hizmetref2, hizmetref3 ) " +
                         "VALUES " +
                         "(@logref,@ogrenciref,@ogrencidonemref,@odemetipi,@taksitno,@taksittar,@tutar_veli,@tutar_egitim,@tutar_yatili,@tutar_burs " +
                         ",@tutar_burs_egitim,@tutar_burs_yatili,@tutar_fatura,@tutar_fatura_egitim,@tutar_fatura_yatili " +
-                        ",@kdvsiz,0,@insuser,GetDate()) ";
+                        ",@kdvsiz,0,@insuser,GetDate(),@hizmetref, @hizmetref2, @hizmetref3) ";
 
                     foreach (OgrenciDonemOdeme odeme in odemeler)
                     {
@@ -582,6 +586,25 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                         p.Add("@tutar_fatura_yatili", odeme.tutar_fatura_yatili);
                         p.Add("@insuser", odeme.insuser);
                         p.Add("@kdvsiz", donem.kdvsiz);
+
+                        switch (odeme.odemetipi)
+                        {
+                            case 2:
+                                p.Add("@hizmetref", 0);
+                                p.Add("@hizmetref2", hizmetkodlari.hizmetref2);
+                                p.Add("@hizmetref3", hizmetkodlari.hizmetref3);
+                                break;
+                            case 3:
+                                p.Add("@hizmetref", hizmetkodlari.hizmetref);
+                                p.Add("@hizmetref2", 0);
+                                p.Add("@hizmetref3", hizmetkodlari.hizmetref3);
+                                break;
+                            default:
+                                p.Add("@hizmetref", 0);
+                                p.Add("@hizmetref2", 0);
+                                p.Add("@hizmetref3", 0);
+                                break;
+                        }
 
                         await db.ExecuteAsync(sqlstring, p, commandType: CommandType.Text, transaction: transaction);
                     }
