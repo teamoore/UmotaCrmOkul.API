@@ -21,7 +21,7 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
 
         public async Task<FiyatDto> GetFiyatByDonem(FiyatRequestDto request)
         {
-            if (request.OdemeSekli == null || request.OdemeSekli == 0)
+            if (request.OdemeSekli == null)
                 throw new Exception("Ödeme şekli gönderilmelidir");
 
             if (request.OdemeSekli != 0 && request.OdemeSekli != 4 && request.OdemeSekli != 7 && request.OdemeSekli != 10)
