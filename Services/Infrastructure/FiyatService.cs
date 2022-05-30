@@ -281,6 +281,8 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
 
         public async Task<FiyatDto> OdemePlaniOlustur(FiyatRequestDto request)
         {
+            await KullaniciControl(request.KullaniciKodu);
+
             if (string.IsNullOrWhiteSpace(request.TcKimlik))
                 throw new Exception("Öğrenci TCKN gönderilmelidir");
 
@@ -299,14 +301,28 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
             if (ogrenciref == 0)
                 throw new Exception("Öğrenci Kartı bulunamadı");
 
-            var ogrencidonemref = await OgrenciDonemRefAl(ogrenciref,request.Sezon,request.Seviye);
+            var ogrencidonem = await OgrenciDonemAl(ogrenciref,request.Sezon,request.Seviye);
 
-            if (ogrencidonemref != 0)
-                throw new Exception("Öğrenci dönem kaydı mevcut, yeni kayıt yapılamaz");
+            if (ogrencidonem != null)
+            {
+                var ogrenciDonemOdemeSatirSayisi = await OgrenciDonemOdemeSatirSayisiAl(ogrencidonem.logref);
+                if (ogrenciDonemOdemeSatirSayisi != 0)
+                    throw new Exception("Öğrenci dönem kaydı mevcut, yeni kayıt yapılamaz");
 
-            await KullaniciControl(request.KullaniciKodu);
+                ogrencidonem.donemref = await GetSabitDetayIDByName(100, request.Sezon);
+                ogrencidonem.sinifref = await GetSabitDetayIDByCode(102, request.Seviye);
+                ogrencidonem.yatiliref = await GetSabitDetayIDByCode(101, request.Yatili.ToString());
+                ogrencidonem.gunduzluref = await GetSabitDetayIDByCode(101, "10"); // Gündüzlü Referansı
+                ogrencidonem.bursref = await GetSabitDetayIDByCode(104, request.BursOrani.ToString());
+                ogrencidonem.odemeref = await GetSabitDetayIDByCode(105, request.OdemeSekli.ToString());
+                ogrencidonem.upduser = request.KullaniciKodu;
+                ogrencidonem.isupdate = true;
+            }
+            else
+            {
+                ogrencidonem = await OgrenciDonemOlustur(ogrenciref, request);
+            }
 
-            var ogrencidonem = await OgrenciDonemOlustur(ogrenciref,request);
             var ogrencidonemodeme = await OgrenciDonemOdemeOlustur(ogrencidonem, fiyat, request);
             await SaveDb(ogrencidonem, ogrencidonemodeme);
 
@@ -342,18 +358,32 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
             }
         }
 
-        public async Task<int> OgrenciDonemRefAl(int ogrenciref, string donem, string sinif)
+        public async Task<OgrenciDonem> OgrenciDonemAl(int ogrenciref, string donem, string sinif)
         {
             using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.CompanyConnectionString)))
             {
-                string sqlstring = "select top 1 a.logref " +
-                    "FROM ogrenci_donem a WITH(NOLOCK) " +
+                string sqlstring = "select top 1 a.* " +
+                    "from ogrenci_donem a WITH(NOLOCK) " +
                     "inner join UmotaCRM_OKUL.dbo.sis_sabitler_detay b with(nolock) on a.donemref = b.sabit_detay_id " +
                     "inner join UmotaCRM_OKUL.dbo.sis_sabitler_detay c with(nolock) on a.sinifref = c.sabit_detay_id " +
                     " WHERE a.ogrenciref = " + ogrenciref +
                     " and a.status < 2 " +
                     " and b.adi like '" + donem + "'" +
                     " and c.kodu like '" + sinif + "'";
+
+                return await db.QuerySingleOrDefaultAsync<OgrenciDonem>(sqlstring);
+            }
+        }
+
+        public async Task<int> OgrenciDonemOdemeSatirSayisiAl(int ogrencidonemref)
+        {
+            using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.CompanyConnectionString)))
+            {
+                string sqlstring = "select count(a.logref) " +
+                    "FROM ogrenci_donem_odeme a WITH(NOLOCK) " +
+                    " WHERE a.ogrencidonemref = " + ogrencidonemref +
+                    " and a.status < 2 " +
+                    " and a.odemetipi in (1,2,3) ";
 
                 return await db.QuerySingleOrDefaultAsync<int>(sqlstring);
             }
@@ -524,6 +554,7 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
         {
             using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.CompanyConnectionString)))
             {
+                var p = new DynamicParameters();
                 string sqlstring = "select top 1 hizmetref, hizmetref2, hizmetref3 from hizmet_kodlari with(nolock) where donemref = " + donem.donemref;
 
                 var hizmetkodlari = await db.QuerySingleOrDefaultAsync<HizmetKodlari>(sqlstring, commandType: System.Data.CommandType.Text);
@@ -532,28 +563,45 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                 var transaction = await db.BeginTransactionAsync();
                 try
                 {
+                    if (!donem.isupdate)
+                    {
+                        sqlstring = "INSERT INTO [dbo].[ogrenci_donem] " +
+                            "(logref,ogrenciref,donemno,donemref,sinifref,yatiliref,bursref,odemeref,bankaref,bankahesapno,bankahesapadi " +
+                            ",kdvsiz,status,insuser,insdate) " +
+                            "VALUES " +
+                            "(@logref,@ogrenciref,@donemno,@donemref,@sinifref,@yatiliref,@bursref,@odemeref,@bankaref,@bankahesapno,@bankahesapadi " +
+                            ",@kdvsiz,0,@insuser,GetDate()) ";
 
-                    sqlstring = "INSERT INTO [dbo].[ogrenci_donem] " +
-                        "(logref,ogrenciref,donemno,donemref,sinifref,yatiliref,bursref,odemeref,bankaref,bankahesapno,bankahesapadi " +
-                        ",kdvsiz,status,insuser,insdate) " +
-                        "VALUES " +
-                        "(@logref,@ogrenciref,@donemno,@donemref,@sinifref,@yatiliref,@bursref,@odemeref,@bankaref,@bankahesapno,@bankahesapadi " +
-                        ",@kdvsiz,0,@insuser,GetDate()) ";
+                        p = new DynamicParameters();
+                        p.Add("@logref", donem.logref);
+                        p.Add("@ogrenciref", donem.ogrenciref);
+                        p.Add("@donemno", donem.donemno);
+                        p.Add("@donemref", donem.donemref);
+                        p.Add("@sinifref", donem.sinifref);
+                        p.Add("@yatiliref", donem.yatiliref);
+                        p.Add("@bursref", donem.bursref);
+                        p.Add("@odemeref", donem.odemeref);
+                        p.Add("@bankaref", donem.bankaref);
+                        p.Add("@bankahesapno", donem.bankahesapno);
+                        p.Add("@bankahesapadi", donem.bankahesapadi);
+                        p.Add("@insuser", donem.insuser);
+                        p.Add("@kdvsiz", donem.kdvsiz);
+                    }
+                    else
+                    {
+                        sqlstring = "Update [dbo].[ogrenci_donem] " +
+                            "Set donemref=@donemref, sinifref=@sinifref, yatiliref=@yatiliref, bursref=@bursref, odemeref=@odemeref, status=1, upduser= @upduser, upddate=GetDate() " +
+                            "where logref = @logref";
 
-                    var p = new DynamicParameters();
-                    p.Add("@logref", donem.logref);
-                    p.Add("@ogrenciref", donem.ogrenciref);
-                    p.Add("@donemno", donem.donemno);
-                    p.Add("@donemref", donem.donemref);
-                    p.Add("@sinifref", donem.sinifref);
-                    p.Add("@yatiliref", donem.yatiliref);
-                    p.Add("@bursref", donem.bursref);
-                    p.Add("@odemeref", donem.odemeref);
-                    p.Add("@bankaref", donem.bankaref);
-                    p.Add("@bankahesapno", donem.bankahesapno);
-                    p.Add("@bankahesapadi", donem.bankahesapadi);
-                    p.Add("@insuser", donem.insuser);
-                    p.Add("@kdvsiz", donem.kdvsiz);
+                        p = new DynamicParameters();
+                        p.Add("@logref", donem.logref);
+                        p.Add("@donemref", donem.donemref);
+                        p.Add("@sinifref", donem.sinifref);
+                        p.Add("@yatiliref", donem.yatiliref);
+                        p.Add("@bursref", donem.bursref);
+                        p.Add("@odemeref", donem.odemeref);
+                        p.Add("@upduser", donem.insuser);
+                    }
 
                     await db.ExecuteAsync(sqlstring, p, commandType: CommandType.Text, transaction:transaction);
 
@@ -740,14 +788,14 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
             if (ogrenciref == 0)
                 throw new Exception("Öğrenci Kartı bulunamadı");
 
-            var ogrencidonemref = await OgrenciDonemRefAl(ogrenciref, request.Sezon, request.Seviye);
+            var ogrencidonem = await OgrenciDonemAl(ogrenciref, request.Sezon, request.Seviye);
 
-            if (ogrencidonemref == 0)
+            if (ogrencidonem == null)
                 throw new Exception("Öğrenci dönem kaydı bulunamadı");
 
             await KullaniciControl(request.KullaniciKodu);
-            await DeleteControls(ogrencidonemref, request.KullaniciKodu);
-            await DeleteDb(ogrencidonemref, request.KullaniciKodu);
+            await DeleteControls(ogrencidonem.logref, request.KullaniciKodu);
+            await DeleteDb(ogrencidonem.logref, request.KullaniciKodu);
 
             return request;
         }
@@ -761,14 +809,20 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                 if (ogrencidonem == null)
                     throw new Exception("Öğrenci dönem kaydı bulunamadı");
 
-                if (!ogrencidonem.insuser.Equals(kullanicikodu))
-                    throw new Exception("Öğrenci dönem kaydını siz oluşturmadınız, bu kaydı geri alamazsınız");
+                sqlstring = "Select top 1 logref, insuser, insdate, upduser, upddate from [dbo].[ogrenci_donem_odeme] with(nolock) where status < 2 and odemetipi = 1 and ogrencidonemref = " + ogrencidonemref;
 
-                if (!string.IsNullOrWhiteSpace(ogrencidonem.upduser))
-                    throw new Exception("Öğrenci dönem kaydı değiştirilmiş, bu kaydı geri alamazsınız");
+                var ogrencidonemodeme = await db.QuerySingleOrDefaultAsync<OgrenciDonemOdeme>(sqlstring, commandType: System.Data.CommandType.Text);
+                if (ogrencidonemodeme == null)
+                    throw new Exception("Öğrenci dönem ödeme kaydı bulunamadı");
 
-                if (ogrencidonem.insdate.Value.AddDays(3) < DateTime.Now)
-                    throw new Exception("Öğrenci dönem kaydı üzerinden 3 gün geçmiş, bu kaydı geri alamazsınız");
+                if (!ogrencidonemodeme.insuser.Equals(kullanicikodu))
+                    throw new Exception("Öğrenci dönem ödeme kaydını siz oluşturmadınız, bu kaydı geri alamazsınız");
+
+                if (!string.IsNullOrWhiteSpace(ogrencidonemodeme.upduser))
+                    throw new Exception("Öğrenci dönem ödeme kaydı değiştirilmiş, bu kaydı geri alamazsınız");
+
+                if (ogrencidonemodeme.insdate.Value.AddDays(3) < DateTime.Now)
+                    throw new Exception("Öğrenci dönem ödeme kaydı üzerinden 3 gün geçmiş, bu kaydı geri alamazsınız");
             }
         }
         public async Task DeleteDb(int ogrencidonemref, string kullanicikodu)
@@ -780,15 +834,11 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                 var transaction = await db.BeginTransactionAsync();
                 try
                 {
-                    sqlstring = "Update [dbo].[ogrenci_donem] Set status = 2, upddate=GetDate(), upduser= @upduser where logref = @ogrencidonemref ";
+                    sqlstring = "Update [dbo].[ogrenci_donem_odeme] Set status = 2, upddate=GetDate(), upduser= @upduser where ogrencidonemref = @ogrencidonemref and odemetipi in (1,2,3) ";
 
                     var p = new DynamicParameters();
                     p.Add("@ogrencidonemref", ogrencidonemref);
                     p.Add("@upduser", kullanicikodu);
-
-                    await db.ExecuteAsync(sqlstring, p, commandType: CommandType.Text, transaction: transaction);
-
-                    sqlstring = "Update [dbo].[ogrenci_donem_odeme] Set status = 2, upddate=GetDate(), upduser= @upduser where ogrencidonemref = @ogrencidonemref ";
 
                     await db.ExecuteAsync(sqlstring, p, commandType: CommandType.Text, transaction: transaction);
 

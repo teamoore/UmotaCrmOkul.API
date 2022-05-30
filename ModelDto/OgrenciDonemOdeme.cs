@@ -24,6 +24,8 @@ namespace UmotaCrmOkul.API.ModelDto
         public double? tutar_fatura_yatili { get; set; }
         public bool kdvsiz { get; set; }
         public string insuser  { get; set; }
+        public DateTime? insdate { get; set; }
+        public string upduser { get; set; }
 
     }
 }

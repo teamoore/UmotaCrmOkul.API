@@ -24,5 +24,6 @@ namespace UmotaCrmOkul.API.ModelDto
         public DateTime? insdate { get; set; }
         public string upduser { get; set; }
         public DateTime? upddate { get; set; }
+        public bool isupdate { get; set; }
     }
 }
