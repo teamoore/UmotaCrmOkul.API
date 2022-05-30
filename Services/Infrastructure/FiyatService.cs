@@ -600,7 +600,7 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                         p.Add("@yatiliref", donem.yatiliref);
                         p.Add("@bursref", donem.bursref);
                         p.Add("@odemeref", donem.odemeref);
-                        p.Add("@upduser", donem.insuser);
+                        p.Add("@upduser", donem.upduser);
                     }
 
                     await db.ExecuteAsync(sqlstring, p, commandType: CommandType.Text, transaction:transaction);
