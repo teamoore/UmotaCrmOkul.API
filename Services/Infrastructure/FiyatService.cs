@@ -525,6 +525,7 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                     if (request.Yatili == 20 || request.Yatili == 30)
                     {
                         Egitim_Tutar = await TabloToplamTutarAl(donem, 0, donem.gunduzluref);
+                        Egitim_Tutar = Egitim_Tutar - await TabloToplamTutarAl(donem, request.BursOrani, donem.gunduzluref);
                         Yatili_Tutar = Fatura_Tutar - Egitim_Tutar;
                     }
 
