@@ -33,6 +33,7 @@ namespace UmotaCrmOkul.API
 
             services.AddControllers();
 
+            services.AddScoped<IFaturaService, FaturaService>();
             services.AddScoped<IFiyatService, FiyatService>();
             services.AddScoped<ISisKullaniciService, SisKullaniciService>();
 

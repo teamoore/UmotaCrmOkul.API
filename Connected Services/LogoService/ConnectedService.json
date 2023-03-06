@@ -1,0 +1,33 @@
+{
+  "ExtendedData": {
+    "inputs": [
+      "https://pb.diyalogo.com.tr/PostboxService.svc"
+    ],
+    "collectionTypes": [
+      "System.Array",
+      "System.Collections.Generic.Dictionary`2"
+    ],
+    "namespaceMappings": [
+      "*, LogoService"
+    ],
+    "references": [
+      "Dapper, {Dapper, 2.0.123}",
+      "Dapper.SqlBuilder, {Dapper.SqlBuilder, 2.0.78}",
+      "Microsoft.AspNetCore.Authentication.JwtBearer, {Microsoft.AspNetCore.Authentication.JwtBearer, 5.0.16}",
+      "Microsoft.IdentityModel.JsonWebTokens, {Microsoft.IdentityModel.JsonWebTokens, 6.7.1}",
+      "Microsoft.IdentityModel.Logging, {Microsoft.IdentityModel.Logging, 6.7.1}",
+      "Microsoft.IdentityModel.Protocols, {Microsoft.IdentityModel.Protocols, 6.7.1}",
+      "Microsoft.IdentityModel.Protocols.OpenIdConnect, {Microsoft.IdentityModel.Protocols.OpenIdConnect, 6.7.1}",
+      "Microsoft.IdentityModel.Tokens, {Microsoft.IdentityModel.Tokens, 6.7.1}",
+      "Microsoft.OpenApi, {Microsoft.OpenApi, 1.2.3}",
+      "Swashbuckle.AspNetCore.Swagger, {Swashbuckle.AspNetCore.Swagger, 5.6.3}",
+      "Swashbuckle.AspNetCore.SwaggerGen, {Swashbuckle.AspNetCore.SwaggerGen, 5.6.3}",
+      "Swashbuckle.AspNetCore.SwaggerUI, {Swashbuckle.AspNetCore.SwaggerUI, 5.6.3}",
+      "System.Data.SqlClient, {System.Data.SqlClient, 4.8.3}",
+      "System.IdentityModel.Tokens.Jwt, {System.IdentityModel.Tokens.Jwt, 6.7.1}",
+      "System.Security.Cryptography.Cng, {System.Security.Cryptography.Cng, 4.5.0}"
+    ],
+    "targetFramework": "net5.0",
+    "typeReuseMode": "All"
+  }
+}
