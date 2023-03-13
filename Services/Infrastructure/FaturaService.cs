@@ -38,7 +38,7 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                 string CLCARD = LogoDbName + ".dbo.LG_" + LogoFirmaNo + "_CLCARD";
                 string CLCARDXT = LogoDbName + ".dbo.LG_XT1015_" + LogoFirmaNo;
 
-                string sqlstring = "SELECT A.LOGICALREF, A.FICHENO, A.DATE_, A.GUID, A.NETTOTAL, A.GENEXP1 " +
+                string sqlstring = "SELECT A.LOGICALREF, A.FICHENO, A.DATE_, A.GUID, A.NETTOTAL, A.GENEXP1, A.EINVOICE " +
 
                     "FROM " + INVOICE + " A WITH(NOLOCK) " +
                     "INNER JOIN " + CLCARD + " B WITH(NOLOCK) ON A.CLIENTREF = B.LOGICALREF " +
@@ -56,8 +56,8 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
         public async Task<FaturaDataResponseDto> GetFaturaData(FaturaDataRequestDto request)
         {
             string uuid = request.GUID;
-            string EFaturaUserName = "6130492852";//ConfigurationManager.AppSettings["EFaturaUserName"].ToString();
-            string EFaturaUserPass = "[ZHzL3BP";//ConfigurationManager.AppSettings["EFaturaUserPass"].ToString();
+            string EFaturaUserName = "4810029966";// "4810029966" ConfigurationManager.AppSettings["EFaturaUserName"].ToString();
+            string EFaturaUserPass = "46HULFZH";// "[ZHzL3BP" ConfigurationManager.AppSettings["EFaturaUserPass"].ToString();
             var datadto = new FaturaDataResponseDto();
 
             using (LogoService.PostBoxServiceClient svc = new LogoService.PostBoxServiceClient(LogoService.PostBoxServiceClient.EndpointConfiguration.PostBoxServiceEndpoint))
@@ -72,8 +72,16 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                 {
                     try
                     {
-                        LogoService.DocumentType dt = await svc.getDocumentDataAsync(loginres.sessionID, uuid, LogoService.GetDocumentType.EINVOICE, LogoService.DocumentDataType.PDF);
-                        datadto.PdfData = dt.binaryData.Value;
+                        if (request.EINVOICE == 1)
+                        {
+                            LogoService.DocumentType dt = await svc.getDocumentDataAsync(loginres.sessionID, uuid, LogoService.GetDocumentType.EINVOICE, LogoService.DocumentDataType.PDF);
+                            datadto.PdfData = dt.binaryData.Value;
+                        }
+                        else
+                        {
+                            LogoService.DocumentType dt = await svc.getDocumentDataAsync(loginres.sessionID, uuid, LogoService.GetDocumentType.EARCHIVE, LogoService.DocumentDataType.PDF);
+                            datadto.PdfData = dt.binaryData.Value;
+                        }
                     }
                     catch (Exception ex)
                     {
