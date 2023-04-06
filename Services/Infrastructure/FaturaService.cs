@@ -43,7 +43,9 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                     "FROM " + INVOICE + " A WITH(NOLOCK) " +
                     "INNER JOIN " + CLCARD + " B WITH(NOLOCK) ON A.CLIENTREF = B.LOGICALREF " +
                     "INNER JOIN " + CLCARDXT + " C WITH(NOLOCK) ON B.LOGICALREF = C.PARLOGREF " +
-                    "WHERE C.OGRENCI_TC LIKE '" + request.TcKimlikNo + "'";
+                    "WHERE (A.GRPCODE = 2)  AND (A.TRCODE = 9) " +
+                    "AND ((A.EINVOICE = 1 and A.ESTATUS = 12) or (A.EINVOICE = 2 and A.ESTATUS = 2)) " +
+                    "AND (C.OGRENCI_TC LIKE '" + request.TcKimlikNo + "')";
 
                 var result = await db.QueryAsync<FaturaDto>(sqlstring);
 
