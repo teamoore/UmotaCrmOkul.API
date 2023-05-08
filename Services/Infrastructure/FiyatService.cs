@@ -822,8 +822,8 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
                 if (!string.IsNullOrWhiteSpace(ogrencidonemodeme.upduser))
                     throw new Exception("Öğrenci dönem ödeme kaydı değiştirilmiş, bu kaydı geri alamazsınız");
 
-                if (ogrencidonemodeme.insdate.Value.AddDays(3) < DateTime.Now)
-                    throw new Exception("Öğrenci dönem ödeme kaydı üzerinden 3 gün geçmiş, bu kaydı geri alamazsınız");
+                if (ogrencidonemodeme.insdate.Value.AddDays(60) < DateTime.Now)
+                    throw new Exception("Öğrenci dönem ödeme kaydı üzerinden 60 gün geçmiş, bu kaydı geri alamazsınız");
             }
         }
         public async Task DeleteDb(int ogrencidonemref, string kullanicikodu)
