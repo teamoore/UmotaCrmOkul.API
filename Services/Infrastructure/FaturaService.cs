@@ -32,20 +32,21 @@ namespace UmotaCrmOkul.API.Services.Infrastructure
             using (var db = new SqlConnection(configuration.GetConnectionString(CrmConsts.LogoConnectionString)))
             {
                 string LogoDbName = configuration["LogoDbName"];
-                string LogoFirmaNo = configuration["LogoFirmaNo"];
-                string LogoDonemNo = configuration["LogoDonemNo"];
-                string INVOICE = LogoDbName + ".dbo.LG_" + LogoFirmaNo + "_" + LogoDonemNo + "_INVOICE";
-                string CLCARD = LogoDbName + ".dbo.LG_" + LogoFirmaNo + "_CLCARD";
-                string CLCARDXT = LogoDbName + ".dbo.LG_XT1015_" + LogoFirmaNo;
+                //string LogoFirmaNo = configuration["LogoFirmaNo"];
+                //string LogoDonemNo = configuration["LogoDonemNo"];
+                //string INVOICE = LogoDbName + ".dbo.LG_" + LogoFirmaNo + "_" + LogoDonemNo + "_INVOICE";
+                //string CLCARD = LogoDbName + ".dbo.LG_" + LogoFirmaNo + "_CLCARD";
+                //string CLCARDXT = LogoDbName + ".dbo.LG_XT1015_" + LogoFirmaNo;
+                string VINVOICE = LogoDbName + ".dbo.UMO_LV_INVOICE";
 
                 string sqlstring = "SELECT A.LOGICALREF, A.FICHENO, A.DATE_, A.GUID, A.NETTOTAL, A.GENEXP1, A.EINVOICE " +
 
-                    "FROM " + INVOICE + " A WITH(NOLOCK) " +
-                    "INNER JOIN " + CLCARD + " B WITH(NOLOCK) ON A.CLIENTREF = B.LOGICALREF " +
-                    "INNER JOIN " + CLCARDXT + " C WITH(NOLOCK) ON B.LOGICALREF = C.PARLOGREF " +
-                    "WHERE (A.GRPCODE = 2)  AND (A.TRCODE = 9) " +
-                    "AND ((A.EINVOICE = 1 and A.ESTATUS = 12) or (A.EINVOICE = 2 and A.ESTATUS = 2)) " +
-                    "AND (C.OGRENCI_TC LIKE '" + request.TcKimlikNo + "')";
+                    "FROM " + VINVOICE + " A WITH(NOLOCK) " +
+                    //"INNER JOIN " + CLCARD + " B WITH(NOLOCK) ON A.CLIENTREF = B.LOGICALREF " +
+                    //"INNER JOIN " + CLCARDXT + " C WITH(NOLOCK) ON B.LOGICALREF = C.PARLOGREF " +
+                    //"WHERE (A.GRPCODE = 2)  AND (A.TRCODE = 9) " +
+                    //"AND ((A.EINVOICE = 1 and A.ESTATUS = 12) or (A.EINVOICE = 2 and A.ESTATUS = 2)) " +
+                    "WHERE (A.OGRENCI_TC LIKE '" + request.TcKimlikNo + "')";
 
                 var result = await db.QueryAsync<FaturaDto>(sqlstring);
 
